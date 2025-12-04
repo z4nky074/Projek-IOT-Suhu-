@@ -45,7 +45,7 @@ public function getSensorById($id)
         }
 
         return response()->json([
-            'success' => true,
+            'success' => true, 
             'data' => $sensor
         ]);
 

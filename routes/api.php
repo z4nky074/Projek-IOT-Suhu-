@@ -13,7 +13,7 @@ Route::delete('/kelembapan/{id}', [IoTController::class, 'deleteKelembapan']);
 
 // Master Data - Ruangan
 Route::get('/ruangan', [IoTController::class, 'getRuangan']);
-Route::get('/ruangan/{id}', [IoTController::class, 'getRuanganById']); // ← Tambahkan ini
+Route::get('/ruangan/{id}', [IoTController::class, 'getRuanganById']); 
 Route::post('/ruangan', [IoTController::class, 'simpanRuangan']);
 Route::put('/ruangan/{id}', [IoTController::class, 'updateRuangan']);
 Route::delete('/ruangan/{id}', [IoTController::class, 'deleteRuangan']);
