@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Suhu;
 use App\Models\Kelembapan;
 
@@ -31,70 +32,219 @@ class IoTController extends Controller
     public function cekAlat() { return $this->get('alat'); }
     public function cekRuangan() { return $this->get('ruangan'); }
 
+    public function getSensorById($id)
+    {
+        try {
+            $sensor = DB::table('sensor')->where('id', $id)->first();
 
-public function getSensorById($id)
-{
-    try {
-        $sensor = DB::table('sensor')->where('id', $id)->first();
+            if (!$sensor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sensor tidak ditemukan'
+                ], 404);
+            }
 
-        if (!$sensor) {
+            return response()->json([
+                'success' => true,  
+                'data' => $sensor
+            ]);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Sensor tidak ditemukan'
-            ], 404);
+                'message' => 'Terjadi kesalahan server',
+                'error_detail' => $e->getMessage()
+            ], 500);
         }
+    }
 
-        return response()->json([
-            'success' => true, 
-            'data' => $sensor
-        ]);
+    public function getRuanganById($id)
+    {
+        try {
+            $ruangan = DB::table('ruangan')->where('id', $id)->first();
 
-    } catch (\Exception $e) {
+            if (!$ruangan) {
+                return response()->json(['error' => 'Ruangan tidak ditemukan'], 404);
+            }
+
+            return response()->json(['success' => true, 'data' => $ruangan]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Terjadi kesalahan server',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Get Alat By ID - RINGKAS (2 data terakhir per sensor)
+    public function getAlatById($id)
+    {
+        try {
+            $alat = DB::table('alat')->where('id', $id)->first();
+            if (!$alat) {
+                return response()->json(['success' => false, 'error' => 'Alat tidak ditemukan'], 404);
+            }
+
+            // Get sensors with 2 latest suhu and kelembapan
+            $sensors = DB::table('sensor')->where('id_alat', $id)->get();
+            $sensorData = [];
+
+            foreach ($sensors as $sensor) {
+                // Get 2 latest suhu
+                $suhuData = DB::table('suhu')
+                    ->where('id_sensor', $sensor->id)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(2)
+                    ->get(['id', 'nilai_suhu', 'created_at'])
+                    ->map(function($s) {
+                        return [
+                            'id' => $s->id,
+                            'nilai_suhu' => (float) $s->nilai_suhu,
+                            'created_at' => $s->created_at
+                        ];
+                    });
+                
+                // Get 2 latest kelembapan
+                $kelembapanData = DB::table('kelembapan')
+                    ->where('id_sensor', $sensor->id)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(2)
+                    ->get(['id', 'nilai_kelembapan', 'created_at'])
+                    ->map(function($k) {
+                        return [
+                            'id' => $k->id,
+                            'nilai_kelembapan' => (float) $k->nilai_kelembapan,
+                            'created_at' => $k->created_at
+                        ];
+                    });
+                
+                $sensorData[] = [
+                    'id' => $sensor->id,
+                    'id_alat' => $sensor->id_alat,
+                    'nama_sensor' => $sensor->nama_sensor,
+                    'suhu' => $suhuData,
+                    'kelembapan' => $kelembapanData
+                ];
+            }
+
+            return response()->json([
+                'success' => true, 
+                'data' => [
+                    'id' => $alat->id,
+                    'nama_alat' => $alat->nama_alat,
+                    'id_ruangan' => $alat->id_ruangan,
+                    'created_at' => $alat->created_at,
+                    'updated_at' => $alat->updated_at,
+                    'sensor' => $sensorData
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in getAlatById', ['id' => $id, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Terjadi kesalahan server', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    // GET semua batasan
+public function getBatasan()
+{
+    $data = DB::table('batasan')->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $data
+    ]);
+}
+
+    // GET batasan by sensor
+public function getBatasanBySensor($id_sensor)
+{
+    $batasan = DB::table('batasan')->where('id_sensor', $id_sensor)->first();
+
+    if (!$batasan) {
         return response()->json([
             'success' => false,
-            'message' => 'Terjadi kesalahan server',
-            'error_detail' => $e->getMessage()
-        ], 500);
+            'error' => 'Batasan tidak ditemukan'
+        ], 404);
     }
+
+    return response()->json([
+        'success' => true,
+        'data' => $batasan
+    ]);
 }
 
-public function getRuanganById($id)
+
+    // POST batasan
+public function simpanBatasan(Request $request)
 {
-    try {
-        $ruangan = DB::table('ruangan')->where('id', $id)->first();
+    $data = $request->validate([
+        'id_sensor' => 'required|exists:sensor,id',
+        'suhu_min' => 'required|numeric',
+        'suhu_max' => 'required|numeric|gt:suhu_min',
+        'kelembapan_min' => 'required|numeric',
+        'kelembapan_max' => 'required|numeric|gt:kelembapan_min'
+    ]);
 
-        if (!$ruangan) {
-            return response()->json(['error' => 'Ruangan tidak ditemukan'], 404);
-        }
+    $id = DB::table('batasan')->insertGetId(array_merge($data, [
+        'created_at' => now(),
+        'updated_at' => now()
+    ]));
 
-        return response()->json(['success' => true, 'data' => $ruangan]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => 'Terjadi kesalahan server',
-            'message' => $e->getMessage()
-        ], 500);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Batasan berhasil disimpan',
+        'data' => DB::table('batasan')->find($id)
+    ], 201);
 }
 
-public function getAlatById($id)
+
+    // UPDATE batasan
+public function updateBatasan(Request $request, $id_sensor)
 {
-    try {
-        $alat = DB::table('alat')->where('id', $id)->first();
-
-        if (!$alat) {
-            return response()->json(['error' => 'Alat tidak ditemukan'], 404);
-        }
-
-        return response()->json(['success' => true, 'data' => $alat]);
-
-    } catch (\Exception $e) {
+    if (!DB::table('batasan')->where('id_sensor', $id_sensor)->exists()) {
         return response()->json([
-            'error' => 'Terjadi kesalahan server',
-            'message' => $e->getMessage()
-        ], 500);
+            'success' => false,
+            'error' => 'Batasan tidak ditemukan'
+        ], 404);
     }
+
+    $data = $request->validate([
+        'suhu_min' => 'required|numeric',
+        'suhu_max' => 'required|numeric|gt:suhu_min',
+        'kelembapan_min' => 'required|numeric',
+        'kelembapan_max' => 'required|numeric|gt:kelembapan_min'
+    ]);
+
+    DB::table('batasan')->where('id_sensor', $id_sensor)->update(array_merge($data, [
+        'updated_at' => now()
+    ]));
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Batasan berhasil diupdate',
+        'data' => DB::table('batasan')->where('id_sensor', $id_sensor)->first()
+    ]);
 }
+
+    // DELETE batasan
+public function deleteBatasan($id_sensor)
+{
+    if (!DB::table('batasan')->where('id_sensor', $id_sensor)->exists()) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Batasan tidak ditemukan'
+        ], 404);
+    }
+
+    DB::table('batasan')->where('id_sensor', $id_sensor)->delete();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Batasan berhasil dihapus'
+    ]);
+}
+
 
     // ========== DASHBOARD ==========
 
@@ -299,4 +449,3 @@ public function getAlatById($id)
 
     public function tes() { return response()->json(['ok' => true, 'message' => 'API running', 'time' => now(), 'version' => '2.0']); }
 }
-    

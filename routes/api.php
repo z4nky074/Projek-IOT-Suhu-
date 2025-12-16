@@ -11,12 +11,12 @@ Route::get('/kelembapan', [IoTController::class, 'getKelembapan']);
 Route::post('/kelembapan', [IoTController::class, 'simpanKelembapan']);
 Route::delete('/kelembapan/{id}', [IoTController::class, 'deleteKelembapan']);
 
-// Master Data - Ruangan
-Route::get('/ruangan', [IoTController::class, 'getRuangan']);
-Route::get('/ruangan/{id}', [IoTController::class, 'getRuanganById']); 
-Route::post('/ruangan', [IoTController::class, 'simpanRuangan']);
-Route::put('/ruangan/{id}', [IoTController::class, 'updateRuangan']);
-Route::delete('/ruangan/{id}', [IoTController::class, 'deleteRuangan']);
+// Batasan per Sensor
+Route::get('/batasan', [IoTController::class, 'getBatasan']);
+Route::get('/batasan/{id_sensor}', [IoTController::class, 'getBatasanBySensor']);
+Route::post('/batasan', [IoTController::class, 'simpanBatasan']);
+Route::put('/batasan/{id_sensor}', [IoTController::class, 'updateBatasan']);
+Route::delete('/batasan/{id_sensor}', [IoTController::class, 'hapusBatasan']); 
 
 // Master Data - Alat
 Route::get('/alat', [IoTController::class, 'getAlat']);
@@ -31,6 +31,13 @@ Route::get('/sensor/{id}', [IoTController::class, 'getSensorById']);
 Route::post('/sensor', [IoTController::class, 'simpanSensor']);
 Route::put('/sensor/{id}', [IoTController::class, 'updateSensor']);
 Route::delete('/sensor/{id}', [IoTController::class, 'deleteSensor']);
+
+// Master Data - Ruangan
+Route::get('/ruangan', [IoTController::class, 'getRuangan']);
+Route::get('/ruangan/{id}', [IoTController::class, 'getRuanganById']);
+Route::post('/ruangan', [IoTController::class, 'simpanRuangan']);
+Route::put('/ruangan/{id}', [IoTController::class, 'updateRuangan']);
+Route::delete('/ruangan/{id}', [IoTController::class, 'deleteRuangan']);
 
 // Dashboard & Analytics
 Route::get('/dashboard', [IoTController::class, 'getDashboard']);
