@@ -27,7 +27,7 @@ class IoTController extends Controller
     public function getAlat() { return $this->get('alat', 'id_ruangan'); }
     public function getSensor() { return $this->get('sensor', 'id_alat'); }
     public function getSuhu() { return $this->get('suhu', 'id_sensor', true); }
-    public function getKelembapan() { return $this->get('kelembapan', 'id_sensor', true); }
+    public function getKelembapan() { return $this->get('kelembapan', 'id_sensor', true); } 
     public function cekSensor() { return $this->get('sensor'); }
     public function cekAlat() { return $this->get('alat'); }
     public function cekRuangan() { return $this->get('ruangan'); }
