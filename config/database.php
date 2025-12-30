@@ -101,7 +101,7 @@ return [
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '10.107.108.109'),
+            'host' => env('DB_HOST', '107.108.0.8'),
             'port' => env('DB_PORT', '1433'),
             'database' => env('DB_DATABASE', 'Iot'),
             'username' => env('DB_USERNAME', 'unisa'),

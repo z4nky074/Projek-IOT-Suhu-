@@ -1,0 +1,13 @@
+services:
+  iot-suhu:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    # image: registry.rsml.app/bridgingv2:latest
+    container_name: iot-suhu
+    restart: unless-stopped
+    ports:
+      - 6002:80
+    volumes:
+      - .env/:/var/www/.env  # Mount .env file
+      - /var/www/vendor  # Only keep vendor directory as anonymous volume
