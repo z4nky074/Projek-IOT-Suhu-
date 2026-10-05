@@ -47,6 +47,7 @@ Route::get('/statistik/{id_sensor}', [IoTController::class, 'getStatistikBySenso
 // Filter By Date Range
 Route::get('/suhu/range', [IoTController::class, 'getSuhuByRange']);
 Route::get('/kelembapan/range', [IoTController::class, 'getKelembapanByRange']);
+Route::get('/data/dua-bulan-terakhir', [IoTController::class, 'getDataDuaBulanTerakhir']);
 
 // Export Data
 Route::get('/export/suhu', [IoTController::class, 'exportSuhu']);

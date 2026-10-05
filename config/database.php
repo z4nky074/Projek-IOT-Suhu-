@@ -109,8 +109,10 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'encrypt' => env('DB_ENCRYPT', 'yes'),
+            'encrypt' => env('DB_ENCRYPT'),
             'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'true'),
+            'pooling' => env('DB_POOLING', false),
+            'multiple_active_result_sets' => env('DB_MULTIPLE_ACTIVE_RESULT_SETS', false),
         ],
 
     ],

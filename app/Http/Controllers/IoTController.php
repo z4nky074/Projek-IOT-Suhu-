@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Suhu;
 use App\Models\Kelembapan;
 
-class IoTController extends Controller 
+class IoTController extends Controller
 {
     // ========== GET DATA (Universal) ==========
 
@@ -27,7 +27,7 @@ class IoTController extends Controller
     public function getAlat() { return $this->get('alat', 'id_ruangan'); }
     public function getSensor() { return $this->get('sensor', 'id_alat'); }
     public function getSuhu() { return $this->get('suhu', 'id_sensor', true); }
-    public function getKelembapan() { return $this->get('kelembapan', 'id_sensor', true); } 
+    public function getKelembapan() { return $this->get('kelembapan', 'id_sensor', true); }
     public function cekSensor() { return $this->get('sensor'); }
     public function cekAlat() { return $this->get('alat'); }
     public function cekRuangan() { return $this->get('ruangan'); }
@@ -45,7 +45,7 @@ class IoTController extends Controller
             }
 
             return response()->json([
-                'success' => true,  
+                'success' => true,
                 'data' => $sensor
             ]);
 
@@ -104,7 +104,7 @@ class IoTController extends Controller
                             'created_at' => $s->created_at
                         ];
                     });
-                
+
                 // Get 2 latest kelembapan
                 $kelembapanData = DB::table('kelembapan')
                     ->where('id_sensor', $sensor->id)
@@ -118,7 +118,7 @@ class IoTController extends Controller
                             'created_at' => $k->created_at
                         ];
                     });
-                
+
                 $sensorData[] = [
                     'id' => $sensor->id,
                     'id_alat' => $sensor->id_alat,
@@ -129,7 +129,7 @@ class IoTController extends Controller
             }
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'data' => [
                     'id' => $alat->id,
                     'nama_alat' => $alat->nama_alat,
@@ -325,6 +325,79 @@ public function deleteBatasan($id_sensor)
         if ($request->end_date) $query->whereDate('created_at', '<=', $request->end_date);
 
         return response()->json(['success' => true, 'data' => $query->orderBy('created_at', 'desc')->paginate(request('per_page', 100))]);
+    }
+
+    public function getDataDuaBulanTerakhir(Request $request) {
+        $validated = $request->validate([
+            'id_sensor' => 'nullable|integer|exists:sensor,id',
+        ]);
+
+        $endDate = now();
+        $startDate = $endDate->copy()->subMonthsNoOverflow(2)->startOfDay();
+        $sensorId = $validated['id_sensor'] ?? null;
+
+        $suhuQuery = DB::table('suhu')
+            ->join('sensor', 'suhu.id_sensor', '=', 'sensor.id')
+            ->join('alat', 'sensor.id_alat', '=', 'alat.id')
+            ->join('ruangan', 'alat.id_ruangan', '=', 'ruangan.id')
+            ->whereBetween('suhu.created_at', [$startDate, $endDate])
+            ->select(
+                'suhu.id',
+                'suhu.nilai_suhu',
+                'suhu.created_at',
+                'sensor.id as id_sensor',
+                'sensor.nama_sensor',
+                'alat.id as id_alat',
+                'alat.nama_alat',
+                'ruangan.id as id_ruangan',
+                'ruangan.nama_ruangan'
+            );
+
+        $kelembapanQuery = DB::table('kelembapan')
+            ->join('sensor', 'kelembapan.id_sensor', '=', 'sensor.id')
+            ->join('alat', 'sensor.id_alat', '=', 'alat.id')
+            ->join('ruangan', 'alat.id_ruangan', '=', 'ruangan.id')
+            ->whereBetween('kelembapan.created_at', [$startDate, $endDate])
+            ->select(
+                'kelembapan.id',
+                'kelembapan.nilai_kelembapan',
+                'kelembapan.created_at',
+                'sensor.id as id_sensor',
+                'sensor.nama_sensor',
+                'alat.id as id_alat',
+                'alat.nama_alat',
+                'ruangan.id as id_ruangan',
+                'ruangan.nama_ruangan'
+            );
+
+        if ($sensorId !== null) {
+            $suhuQuery->where('suhu.id_sensor', $sensorId);
+            $kelembapanQuery->where('kelembapan.id_sensor', $sensorId);
+        }
+
+        $suhu = $suhuQuery->orderBy('suhu.created_at')->get();
+        $kelembapan = $kelembapanQuery->orderBy('kelembapan.created_at')->get();
+
+        return response()->json([
+            'success' => true,
+            'periode' => [
+                'mulai' => $startDate->toDateTimeString(),
+                'selesai' => $endDate->toDateTimeString(),
+                'timezone' => config('app.timezone'),
+            ],
+            'filter' => [
+                'id_sensor' => $sensorId,
+            ],
+            'total' => [
+                'suhu' => $suhu->count(),
+                'kelembapan' => $kelembapan->count(),
+                'keseluruhan' => $suhu->count() + $kelembapan->count(),
+            ],
+            'data' => [
+                'suhu' => $suhu,
+                'kelembapan' => $kelembapan,
+            ],
+        ]);
     }
 
     // ========== EXPORT CSV ==========
